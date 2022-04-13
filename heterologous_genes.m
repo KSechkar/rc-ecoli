@@ -20,15 +20,26 @@ classdef heterologous_genes
         % Constructor (EDIT TO SPECIFY GENES)
         function obj = heterologous_genes(obj)
             % ENTER GENE NAMES HERE
-            obj.names = {'xtra'};
+            obj.names = {'xtra'}; % default: one extra gene
 
             % set parameters and initial conditions
-            obj.num_genes=size(obj.names,1);
+            obj.num_genes=size(obj.names,2);
             obj = obj.set_default_parameters(); % set defualt parameters
             obj = obj.set_default_init_conditions(); % set init conditions
             obj.current_ks=zeros(obj.num_genes,1); % initialise ribosome dissociation constants
         end
         
+        % reload the heterologous gene simulator for a given list of names
+        function obj = reset_for_names(obj,names)
+            obj.names = names;
+
+            % set parameters and initial conditions
+            obj.num_genes=size(obj.names,2);
+            obj = obj.set_default_parameters(); % set defualt parameters
+            obj = obj.set_default_init_conditions(); % set init conditions
+            obj.current_ks=zeros(obj.num_genes,1); % initialise ribosome dissociation constants
+        end
+
         % Setting default parameter values (EDIT TO SPECIFY GENES)
         function obj = set_default_parameters(obj)
             obj.parameters = containers.Map('KeyType', 'char', ...

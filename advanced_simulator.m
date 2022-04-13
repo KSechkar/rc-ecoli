@@ -25,7 +25,8 @@ classdef advanced_simulator
             end
             obj.parameters=advanced_params(); % set defualt parameters
             obj.init_conditions=advanced_init_conds(obj.parameters); % set init conditions
-            obj.het=heterologous_genes(); % set up heterologous genes
+
+            obj.het=heterologous_genes(); % set up heterologous genes (default: one extra gene)
         end
         
         function obj = simulate_model(obj)
