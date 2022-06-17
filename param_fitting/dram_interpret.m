@@ -1,29 +1,35 @@
-%% CLEAR
+%% dram_interpret.m
+% load and interpret rsults of parameter fitting with DRAM
+
+%% CLEAR parameters, add paths of all files
 
 addpath(genpath('..'))
 
 clear
 close all
 
-%% ORIGINAL PARAMETER VALUES
+%% DEFINE starting parameter values (to compare with the fit)
+
 params = {
-    {'a_a', 55800,  0}
-    {'a_r', 55800, 0}
-    {'nu_max', 6000,  0}
-    {'K_t', 80000, 0}
-    {'kcm', 0.3594/1000, 0}
+    {'a_a', 55800,  0} % metabolic gene transcription rate
+    {'a_r', 55800, 0} % max. ribosomal gene transcription rate
+    {'nu_max', 6000,  0} % max. tRNA aminoacylatio rate
+    {'K_t', 80000, 0} % MM constants for translation elongation and tRNA charging rates
+    {'kcm', 0.3594/1000, 0} % chloramphenicol binding rate constant
     };
+
 % record original params into a single vector
 theta_origin=zeros([size(params,1) 1]);
 for i=1:size(theta_origin,1)
     theta_origin(i) = params{i}{2};
 end
 
-%% LOAD EXPERIMENTAL DATA (FOR COMPARISON WITH MODEL)
-% read the experimental dataset (eq2 strain of Scott 2010)
-dataset = readmatrix('data/scott2010-eq2-notext.csv');
+%% LOAD Experimental data (to compare with the fit)
 
-% [1] => nutrient qualities are equally log-spaced points
+% read the experimental dataset (eq2 strain of Scott 2010)
+dataset = readmatrix('data/scott2010_chure2022_notext.csv');
+
+% nutrient qualities are equally log-spaced points
 nutr_quals=logspace(log10(0.08),log10(0.5),6);
 
 % get inputs: nutrient quality and h; get outputs: l and rib mass frac
@@ -43,50 +49,48 @@ for i = 1:size(dataset,1)
     end
 end
 
-%% SET UP SIMULATOR
-% params for finding steady state
-Delta = 0.1; % threshold below which the changes in l and phi_r assumed negligible
-Max_iter=25; % max. no iterations for finding steady state
-sim=advanced_simulator; % initialise simulator
-sim.tf=10;
-sim.opt = odeset('reltol',1.e-6,'abstol',1.e-9);
+%% SET UP the simulator
 
-%% DISPLAY CHAIN PLOTS
-% Chain plots should reveal that the chain has converged and we can
-% use the results for estimation and predictive inference.
+sim=cell_simulator; % initialise simulator
+
+% parameters for getting steady state
+sim.tf = 10; % single integraton step timeframe
+Delta = 0.1; % threshold that determines if we're in steady state
+Max_iter = 75; % maximum no. iterations (checking if SS reached over first 750 h)
+
+sim.opt = odeset('reltol',1.e-6,'abstol',1.e-9); % more lenient integration tolerances for speed
+
+model.ssfun = @(theta,data) rc_ecoli_sos(theta,data,sim,Delta,Max_iter);
+
+%% LOAD ftting outcome
 
 % first 5000 points
-load('outcomes/newcm_outcome_1306.mat');
+load('outcomes/hpz2_outcome_2705.mat');
 results = mcmc_outcome.results;
 chain = mcmc_outcome.chain;
 s2chain = mcmc_outcome.chain;
 
-% load('outcomes/azure_outcome_1805.mat');
-% results1 = mcmc_outcome.results;
-% chain1 = mcmc_outcome.chain;
-% s2chain1 = mcmc_outcome.chain;
-% chain=[chain;chain1];
-% s2chain=[s2chain;s2chain1];
+%% PLOT the chains
 
-% discard unstable entries
-%chain=chain(1:1500,:);
-
-
+% pairwise parameter value scatter diagram
 figure(2); clf
 mcmcplot(chain,[],results,'pairs');
+
+% obtained probability density functions
 figure(3); clf
 mcmcplot(chain,[],results,'denspanel',2); %
 
-%% DISPLAY MCMC CHAIN STATISTICS
+%% DISPLAY mcmc chain statistics
 % Function |chainstats| calculates mean ans std from the chain and
 % estimates the Monte Carlo error of the estimates. Number |tau| is
 % the integrated autocorrelation time and |geweke| is a simple test
 % for a null hypothesis that the chain has converged.
 chainstats(chain,results)
 
-%% ESTIMATE PROBABILITY DISTRIBUTION MODES
+%% ESTIMATE modes of probaility distributions to get fitted parameter values
+
 pd = fitdist(chain(:,1),'Kernel');
-points_in_pdf=1000; % resolution of pdf approximation
+points_in_pdf=500; % resolution of pdf approximation
 modes=zeros([size(chain,2) 1]); % initialise array of mode values
 pdfs=zeros([size(chain,2) points_in_pdf]);
 for i = 1:size(chain,2)
@@ -100,33 +104,17 @@ for i = 1:size(chain,2)
         pdfs(i,j)=pdf(j);
     end
 end
-means=mean(chain,1).';
 
-% compare means and modes
-% reduced_sos(modes,data,sim,Delta,Max_iter)
-% reduced_sos(means,data,sim,Delta,Max_iter)
+%% GET model predictions with fitted parameters
+ymodel=rc_ecoli_modelfun(modes,data.xdata,sim,Delta,Max_iter);
 
-%% MODEL PREDICTIONS
-% get points from the model
-%modes=[248.4; 55800/250; 4000; 1080000; 80000; 1; 0.5/1000];
-% modes=exp([ 14.0574      13.3057      8.74011      11.2213     -7.87053].');
+disp(['SOS=',num2str(sum((ymodel-data.ydata).^2))]) % print resultant sum of squared errors
 
-% modes(1) = 55800; %11360; %194.1; % transcription rate (/h) [FITTED]
-% modes(2) = 55800; %9077; %155.1; % transcription rate (/h) [FITTED]
-% modes(5)=modes(5)*10;
-% modes(1) = modes(1).*10000; %11360; %194.1; % transcription rate (/h) [FITTED]
-% modes(2) = modes(2).*10000; %9077; %155.1; % transcription rate (/h) [FITTED]
-% modes(2)=modes(1)/1.25;
-% modes(4)=modes(4)/3;
-
-ymodel=advanced_modelfun(modes,data.xdata,sim,Delta,Max_iter);
-
-sum((ymodel-data.ydata).^2)
-
-% get point from ORIGINAL model estimate
-ymodel_origin=advanced_modelfun(theta_origin,data.xdata,sim,Delta,Max_iter);
+% get points for original/strarting parameter values (optional)
+% ymodel_origin=rc_ecoli_modelfun(theta_origin,data.xdata,sim,Delta,Max_iter);
 
 %% PLOT AND COMPARE
+
 Fdata = figure('Position',[0 0 385 280]);
 set(Fdata, 'defaultAxesFontSize', 9)
 hold on
@@ -139,19 +127,17 @@ for i=1:size(data.xdata,1)
         last_nutr_qual=data.xdata(i,1);
     end
     plot(data.ydata(i,1),data.ydata(i,2),'o','Color',colours(colourind),'LineWidth',1) % real data
-    plot(ymodel(i,1),ymodel(i,2),'+','Color',colours(colourind),'MarkerSize',8,'LineWidth',1.25) % model prediction
-    %plot(ymodel_origin(i,1),ymodel_origin(i,2),'x','Color',colours(colourind),'MarkerSize',8,'LineWidth',1.25) % original model predictions
+    plot(ymodel(i,1),ymodel(i,2),'+','Color',colours(colourind),'MarkerSize',8,'LineWidth',1.25) % model predictions
+    %plot(ymodel_origin(i,1),ymodel_origin(i,2),'x','Color',colours(colourind),'MarkerSize',8,'LineWidth',1.25) % original model predictions (optional)
 
 end
 ylabel('Ribosome mass fraction \phi_r');
 xlabel('Growth rate \lambda, 1/h')
 xlim([0.25 1.75])
-% ylim([0 0.45])
 hold off
-% legend('RDM+Glucose, \sigma=0.5','RDM+Glycerol, \sigma=0.347','cAA+Glucose, \sigma=0.240',...
-%     'cAA+Glycerol, \sigma=0.167','M63+Glucose, \sigma=0.115','FontSize',9)
 
-%% 1ST GROWTH LAW FITS
+%% ADD lines for 1ST GROWTH LAW FITS
+
 % group data by nutrient quality
 xs_1={[],[],[]};
 ys_1={[],[],[]};
@@ -192,9 +178,9 @@ end
 xlim([0 2])
 ylim([0 0.45])
 hold off
-%legend('4 uM chlorampenicol','2 uM chlorampenicol','0 uM chlorampenicol','FontSize',9)
 
-%% 2ND GROWTH LAW FITS
+%% ADD lines for 2ND GROWTH LAW FITS
+
 % group data by nutrient quality
 xs_2={[]};
 ys_2={[]};
@@ -238,13 +224,14 @@ ylim([0 0.45])
 hold off
 
 %% FIM AND EIGENVALUES
-% estimate Fisher Info Matrix as inverse of covar
-FIM=pinv(cov(chain))
+% estimate Fisher Info Matrix as inverse of the variance-covariance matrix for
+% the chains
+FIM=pinv(cov(chain)) % print FIM
 eigenvals=eig(FIM);
 eigenvals_norm=eigenvals./max(eigenvals);
-eigenvals_log=log10(eigenvals_norm)
+eigenvals_log=log10(eigenvals_norm) % print normalised eigenvalue logarithms
 
-%% PARAMETER SENSITIVITY
+%% PARAMETER SENSITIVITIES
 % get the matrix C that diagonalises FIM
 [C,DIAG]=eig(FIM);
 
@@ -255,4 +242,5 @@ for j=1:size(sens2,2)
         sens2(j)=sens2(j)+eigenvals(i)*(C(i,j)^2);
     end
 end
-sens_log=log10(sens2./(sum(sens2)))
+disp('Parameter sensitivities (for a_a, a_r, nu_max, K_t and kcm respectively) ')
+sens_log=log10(sens2./(sum(sens2))) % print parameter sensitivities

@@ -1,25 +1,34 @@
+%% constant_inducer.m
+% Describes an external input (e.g. chemical or light stimulus applied to cells)
+% Here, CONSTANT LEVEL OF A CHEMICAL INDUCER
+
+%%
+
 classdef constant_inducer
-    % describe genes and their parameters
     properties (SetAccess = public)
-        module_name;
-        names;
-        compatible_hets;
-        input_func_parameters;
+        module_name='constant_inducer'; % name of the external input module
+        name; % name of input
+        input_func_parameters; % parameters of the input functions
+        
+        % 'Compatible' heterologous gene expression modules (e.g. if administered 
+        % signal is claculated using fluorescent readouts, only modules with F.P. expression can be used with it)
+        % If this is left empty, the module is assumed compatible with any set of synthetic genes.
+        compatible_hets; 
+        
     end
 
-    % regulatory functions
     methods (Access = public)
+
+        % CONSTRUCTOR
         function obj =constant_inducer(obj)
             obj.module_name='constant_inducer';
             % -------------------------------------------------------------
-            % SPECIFY EXTERNAL INPUT INFO----------------------------------
+            % SPECIFY INPUT INFO-------------------------------------------
             
             % SPECIFY INPUT NAMES HERE
-            obj.names={'inducer'};
+            obj.name={'inducer'}; % chemical inducer
 
             % SPECIFY COMPATIBLE HETEROLOGOUS MODULES
-            % (e.g. input depends on flu. readout => only modules with GFP compatible)
-            % leave empty if it does not matter
             obj.compatible_hets={};
 
 
@@ -34,21 +43,20 @@ classdef constant_inducer
             % -------------------------------------------------------------
             % SPECIFY INPUT INFO--------------------------------------------
 
-            % SPECIFY NON-DEFAULT PARAMETERS HERE
-            obj.input_func_parameters('inducer_level')=100; % constant conc of IPTG (nM)
+            % SPECIFY PARAMETERS HERE
+            obj.input_func_parameters('inducer_level')=100; % constant conc of inducer (nM)
 
             % END OF USER SPEC---------------------------------------------
             % -------------------------------------------------------------
         end
         
-        % regulation functions for heterologous mRNA transcription
-        % sensing state of the system
+        % applied input as a function of the system's state x and time t
         function inp = input(obj,x,t)
 
             % -------------------------------------------------------------
             % SPECIFY EXTERNAL INPUT FUNCTION------------------------------
 
-            inp=obj.input_func_parameters('inducer_level');
+            inp=obj.input_func_parameters('inducer_level'); % constant conc of inducer (nM)
 
             % END OF USER SPEC---------------------------------------------
             % -------------------------------------------------------------

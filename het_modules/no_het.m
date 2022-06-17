@@ -1,29 +1,38 @@
-classdef no_het
-    % describe genes and their parameters
-    properties (SetAccess = public)
-        module_name;
-        names;
-        misc_names;
-        parameters;
-        init_conditions;
+%% no_ext.m
+% Describes heterologous genes expressed in the cell
+% Here, NO HETEROLOGOUS GENES
 
+% Due to being 'empty', this script can be copied and amended as a template for 
+% describing other synthetic gene circuits. The 'SPECIFY GENE INFO'-'END OF USER
+% SPEC' brackets mark areas where the case-specific information should be added
+
+%%
+
+classdef no_het
+    properties (SetAccess = public)
+        module_name='no_het'; % name of the heterologous gene module
+        names; % names of all heterologous genes
+        misc_names; % names of modelled miscellanous species (e.g. compound of interest that het. proteins synthesise)
+        parameters; % parameters of heterologous genes
+        init_conditions; % initial conditions for all modelled species
+
+        % 'Compatible' external input signal modules (e.g.
+        % optogenetic circuits only work with light signals)
+        % If this is left empty, the module is assumed compatible with any set of synthetic genes.
         prerequisite_exts;
     end
 
-    % regulatory functions
     methods (Access = public)
+        % CONSTRUCTOR
         function obj = no_het(obj)
             obj.module_name='no_het';
 
             % -------------------------------------------------------------
             % SPECIFY GENE INFO--------------------------------------------
 
-            % SPECIFY PREREQUISITE EXTERNAL INPUT
-            % the external input must be one of the listed
-            % if no external inputs required, leave empty
             obj.prerequisite_exts={};
 
-            % SPECIFY GENE NAMES HERE
+            % SPECIFY GENE AND MISC. SPECIES NAMES HERE
             obj.names={};
 
             obj.misc_names={};
@@ -32,19 +41,19 @@ classdef no_het
             % -------------------------------------------------------------
 
 
-            % default parameters
+            % initialise the map storing all genes' parameters and fill with default gene expression parameters
             obj.parameters=containers.Map('KeyType', 'char', ...
                     'ValueType', 'double');
              for i=1:size(obj.names,2)
-                obj.parameters(['c_',obj.names{i}]) = 1; % copy no. (nM) default: [1]*
-                obj.parameters(['a_',obj.names{i}]) = 10; % max transcription rate (nM)
-                obj.parameters(['b_',obj.names{i}]) = 6; % mRNA decay rate (/h) default: [1]
-                obj.parameters(['k+_',obj.names{i}]) = 60; % ribosome binding rate (/h/nM) default: [1]
-                obj.parameters(['k-_',obj.names{i}]) = 60; % ribosome unbinding rate (/h) default: [1]
-                obj.parameters(['n_',obj.names{i}]) = 300; % protein length (aa) default: [1]
+                obj.parameters(['c_',obj.names{i}]) = 1; % copy no. (nM)
+                obj.parameters(['a_',obj.names{i}]) = 100; % max transcription rate (/h)
+                obj.parameters(['b_',obj.names{i}]) = 6; % mRNA decay rate (/h)
+                obj.parameters(['k+_',obj.names{i}]) = 60; % ribosome binding rate (/h/nM)
+                obj.parameters(['k-_',obj.names{i}]) = 60; % ribosome unbinding rate (/h)
+                obj.parameters(['n_',obj.names{i}]) = 300; % protein length (aa)
              end
 
-            % default initial conditions
+            % initialise the map storing initial conditions and fill with default values
             obj.init_conditions=containers.Map('KeyType', 'char', ...
                     'ValueType', 'double');
              for i=1:size(obj.names,2)
@@ -65,14 +74,19 @@ classdef no_het
             % -------------------------------------------------------------
         end
         
-        % regulation functions for heterologous mRNA transcription
-        % sensing state of the system
+        % regulation function for heterologous gene transcription
+        % for the gene called gene_name -
+        % depends on the system's state x and external input ext_inp
         function F = regulation(obj,gene_name,x,ext_inp)
+            het_par=obj.parameters;
+            x_het=x( 10 : 9+size(obj.names,2)*2 ); % get heterologous gene info
+            misc=x(10+size(obj.names,2)*2:end); % get miscellaneous species info
 
             % -------------------------------------------------------------
             % SPECIFY REGULATORY FUNCTIONS---------------------------------
-
-            if strcmp(gene_name,'xtra')
+            
+            % if-else statements for every gene name in obj.names
+            if strcmp(gene_name,'')
                 F=1;
 
             % END OF USER SPEC---------------------------------------------
@@ -83,7 +97,11 @@ classdef no_het
         end
 
         % any extra terms in mRNA ODEs apart from synthesis & growth dilution
+        % for the gene called gene_name
         function extra_term=extra_m_term(obj,gene_name,x,ext_inp)
+            het_par=obj.parameters;
+            x_het=x( 10 : 9+size(obj.names,2)*2 ); % get heterologous gene info
+            misc=x(10+size(obj.names,2)*2:end); % get miscellaneous species info
 
             % -------------------------------------------------------------
             % SPECIFY TERMS---------------------------------
@@ -100,7 +118,11 @@ classdef no_het
         end
 
         % any extra terms in protein ODEs apart from synthesis & growth dilution
+        % for the gene called gene_name
         function extra_term=extra_p_term(obj,gene_name,x,ext_inp)
+            het_par=obj.parameters;
+            x_het=x( 10 : 9+size(obj.names,2)*2 ); % get heterologous gene info
+            misc=x(10+size(obj.names,2)*2:end); % get miscellaneous species info
 
             % -------------------------------------------------------------
             % SPECIFY REGULATORY FUNCTIONS---------------------------------
@@ -118,7 +140,17 @@ classdef no_het
 
         % ODEs for miscellaneous species in the system
         function dxdt=misc_ode(obj,t,x,ext_inp,l)
-            dxdt=[];
+            het_par=obj.parameters;
+            x_het=x( 10 : 9+size(obj.names,2)*2 ); % get heterologous gene info
+            misc=x(10+size(obj.names,2)*2:end); % get miscellaneous species info
+
+            % -------------------------------------------------------------
+            % SPECIFY  MISCELLANEOUS SPECIES' ODES-------------------------
+            
+            dxdt=[]; % no miscellaneous species
+
+            % END OF USER SPEC---------------------------------------------
+            % -------------------------------------------------------------
         end
         
     end

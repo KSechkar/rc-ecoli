@@ -1,14 +1,23 @@
-function last_xt=get_steady(sim,Delta,Max_iter)
-    % iterate integrations until steady state reached
-    last_x=zeros(1,size(sim.init_conditions,1)); % start with growth rate assumed to be zero
+%% get_steady.m
+% Function for getting the system's steady state
+% returns the steady state x and time t taken to achieve it
+
+%%
+
+function last_x=get_steady(sim,... % simulator object
+    Delta,... % error tolerance (simulation stops when sum of square errors between current and previous state is less than Delta)
+    Max_iter) % maximum number of iterations over which the cycle is run
+
+    % iterate integrations over sim.tf hours until steady state is reached
+    last_x=zeros(1,size(sim.init_conditions,1)); % assume that at iteration zero, all variables are at 0
     for i=1:Max_iter
         % integrate
         sim = sim.simulate_model;
         
         if(norm(sim.x(end,:)-last_x)<Delta) % if SS reached, quit
-            %disp(['SS reached in ',num2str(i),' iterations'])
+            last_x=sim.x(end,:);
             break
-        else % if not, continue integrating
+        else % if not, continue integration, making the current state the new initial condition
             if(i==Max_iter)
                 disp('Warning! SS not reached yet')
             end
@@ -41,6 +50,4 @@ function last_xt=get_steady(sim,Delta,Max_iter)
             last_x=sim.x(end,:);
         end
     end
-    last_t=sim.t(end);
-    last_xt={last_x,last_t};
 end

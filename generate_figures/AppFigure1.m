@@ -1,15 +1,17 @@
-%% main_code.m
-% Generate Appendix Figure 1 - test simulation of the system
+%% AppFigure1.m
+% Generate Appendix Figure 1 - example simulation of the system
+
+%% CLEAR parameters, add paths of all files
 
 addpath(genpath('..'))
 
 clear
 close all 
 
-%% SET UP the simulator
-sim = advanced_simulator;
+%% SIMULATE the model
+sim = cell_simulator;
 sim.tf=4;
-sim.init_conditions('s')=0.1665;
+sim.init_conditions('s')=0.5;
 
 sim = sim.simulate_model;
 

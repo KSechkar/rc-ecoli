@@ -1,34 +1,40 @@
 %% Figure9ab.m
-% Generate Figure 9a,b - parameters and reduced leakiness
+% Generate Figure 9a,b - demonstrate how increasing actuator and annihilator RNA 
+% synthesis and binding rates and theta combats leakiness, i.e. reduces the
+% steady-state error in the value of the annhilitaor's transcription
+% regulation function and the enforced growth rate
+
+%% CLEAR all variables
 
 addpath(genpath('..'))
 
-clear
-close all 
+close all
+clear all
 
-%% SET UP and RUN the simulators for both cases
+%% SET UP and RUN the simulators for all cases
 
-% define how many resacalings are to be performed
-rescales=logspace(-2,2,7);
+% define how many scaled values of kappa and theta are to be considered
+rescales=logspace(0,2,4); % 7 evenly log-spaced points from original values *1 to *100
 
 for cond=1:size(rescales,2)
-    sim{cond}=advanced_simulator;
+    sim{cond}=cell_simulator;
+    sim{cond}=sim{cond}.load_heterologous_and_external('aif_controller','pulse_inducer'); % load the het. gene and ext. inp. modules
 
     % disturbance signal parameters
-    sim{cond}=sim{cond}.load_heterologous_and_external('integral_dirdist','pulse_inducer');
-    sim{cond}.ext.input_func_parameters('inducer_base_level')=1;
-    sim{cond}.ext.input_func_parameters('pulse_value_prop')=0;
-    sim{cond}.ext.input_func_parameters('pulse_start_time')=0;
-    sim{cond}.ext.input_func_parameters('pulse_duration')=21;
-    sim{cond}.het.parameters('a_dist')=300;
+    sim{cond}.ext.input_func_parameters('inducer_base_level')=1; % disturbance flicks transcription reg. func. from 0 to 1 at t=30
+    sim{cond}.ext.input_func_parameters('pulse_value_prop')=0; % disturbance flicks transcription reg. func. from 0 to 1 at t=30
+    sim{cond}.ext.input_func_parameters('pulse_start_time')=0; % disturbance flicks transcription reg. func. from 0 to 1 at t=30
+    sim{cond}.ext.input_func_parameters('pulse_duration')=21;% disturbance flicks transcription reg. func. from 0 to 1 at t=30
+    sim{cond}.het.parameters('c_dist')=100; % gene copy number
+    sim{cond}.het.parameters('a_dist')=300; % max. gene transcription rate
     
     % integral controller parameters
-    sim{cond}.het.parameters('K_dna-sens')=4000;
-    sim{cond}.het.parameters('eta_dna-sens')=1;
-    sim{cond}.het.parameters('kb_anti')=300;
-    sim{cond}.het.parameters('a_sens')=15;
-    sim{cond}.het.parameters('a_anti')=2000;
-    sim{cond}.het.parameters('a_act')=1000;
+    sim{cond}.het.parameters('K_dna-sens')=4000; % sensor prot.-DNA binding Hill constant
+    sim{cond}.het.parameters('eta_dna-sens')=1; % sensor prot.-DNA binding Hill coefficient
+    sim{cond}.het.parameters('kb_anti')=300; % atcuator-annihilator binding rate constant
+    sim{cond}.het.parameters('a_sens')=15; % sensor gene transcription rate
+    sim{cond}.het.parameters('a_anti')=2000; % annigilator transcription rate
+    sim{cond}.het.parameters('a_act')=1000; % actuatr transcription rate
     
     % to mitigate leakiness, scale the synthesis and binding rates of aniilator and actuator
     sim{cond}.het.parameters('a_anti')=sim{cond}.het.parameters('a_anti').*rescales(cond);
@@ -46,7 +52,7 @@ for cond=1:size(rescales,2)
 end
 
 
-%% GET relevant time frame (start 1h before disturbance, end 4h after)
+%% GET relevant time frame (start 5h before disturbance, end 5h after)
 for cond=1:size(rescales,2)
     % find first point in the frame
     for i=1:size(sim{cond}.t,1)
@@ -85,19 +91,19 @@ for cond=1:size(rescales,2)
     
         % USEFUL PRE-CALCULATIONS
         % translation elongation rate
-        e=sim{cond}.coll.e(par,tc);
+        e=sim{cond}.form.e(par,tc);
     
         % ribosome inactivation rate due to chloramphenicol
         kcmh=par('kcm').*h;
     
         % ribosome dissociation constants
-        k_a=sim{cond}.coll.k(e,par('k+_a'),par('k-_a'),par('n_a'),kcmh);
-        k_r=sim{cond}.coll.k(e,par('k+_r'),par('k-_r'),par('n_r'),kcmh);
+        k_a=sim{cond}.form.k(e,par('k+_a'),par('k-_a'),par('n_a'),kcmh);
+        k_r=sim{cond}.form.k(e,par('k+_r'),par('k-_r'),par('n_r'),kcmh);
         % heterologous genes
         k_het=ones(1,sim{cond}.num_het);
         if(sim{cond}.num_het>0)
             for j=1:sim{cond}.num_het
-                k_het(j)=sim{cond}.coll.k(e,...
+                k_het(j)=sim{cond}.form.k(e,...
                 sim{cond}.parameters(['k+_',sim{cond}.het.names{j}]),...
                 sim{cond}.parameters(['k-_',sim{cond}.het.names{j}]),...
                 sim{cond}.parameters(['n_',sim{cond}.het.names{j}]),...
@@ -111,7 +117,7 @@ for cond=1:size(rescales,2)
         B=R.*(1-1./D); % actively translating ribosomes - INCLUDING Q
     
         % growth rate
-        l=sim{cond}.coll.l(par,e,B);
+        l=sim{cond}.form.l(par,e,B);
     
         % RECORD VALUES
         ls{cond}(i)=l;

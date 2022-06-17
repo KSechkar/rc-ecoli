@@ -2,8 +2,10 @@
 % collection of functions for approximating the effects of heterologous
 % gene expression
 
-% IMPORTANT: APPROXIMATION WORKS FOR STEADY STATE WITH UNCHANGING EXTERNAL
-% INPUT ONLY! THUS, t=0 USED WHEN GETTING EXT.INP
+% WARNING: these functions work only when the external input is unchanging,
+% as we assume t=0 to calculate this input
+
+%%
 
 classdef heterologous_approx
    
@@ -41,14 +43,14 @@ classdef heterologous_approx
                 e0, ... % steady state translation elongation rate without heterologous gene expression
                 sim) % simulator (required to get parameters and regulatory functions for all genes)
             
-            % store model parameters in arrays
+            % store model parameters in an array
             par=sim.parameters;
 
             % GET the denominator for phi_i expression
-            denominator=obj.denominator(plasmid_conc,ss,ss0,e0,par,sim);
+            denominator=obj.denominator(plasmid_conc,ss,ss0,e0,sim);
 
             % get the phi value
-            k = sim.coll.k(e0,kplus,kminus,n,par('kcm').*par('h'));
+            k = sim.form.k(e0,kplus,kminus,n,par('kcm').*ss(8));
             phi = F.*c.*a./k./denominator;
         end
 
@@ -60,18 +62,18 @@ classdef heterologous_approx
                 e0, ... % steady state translation elongation rate without heterologous gene expression
                 sim) % simulator (required to get parameters and regulatory functions for all genes)
             
-            % store model parameters in arrays
+            % store model parameters in an array
             par=sim.parameters;
             ext_inp=sim.ext.input(ss,0);
 
             % GET the denominator for phi_i expression
-            denominator=obj.denominator(plasmid_conc,ss,ss0,e0,par,sim);
+            denominator=obj.denominator(plasmid_conc,ss,ss0,e0,sim);
 
             % get numerator (sum of all heterologous genes' contributions)
             numerator=0; % initialise numerator
             for i=1:sim.num_het
-                k_i=sim.coll.k(e0,par(['k+_',sim.het.names{i}]),...
-                    par(['k-_',sim.het.names{i}]),par(['n_',sim.het.names{i}]),par('kcm').*par('h'));
+                k_i=sim.form.k(e0,par(['k+_',sim.het.names{i}]),...
+                    par(['k-_',sim.het.names{i}]),par(['n_',sim.het.names{i}]),par('kcm').*ss(8));
                 F_i=sim.het.regulation(sim.het.names{i},ss, ext_inp);
                 numerator=numerator+F_i.*plasmid_conc.*par(['a_',sim.het.names{i}])./k_i;
             end
@@ -88,63 +90,44 @@ classdef heterologous_approx
                 e0, ... % steady state translation elongation rate without heterologous gene expression
                 sim) % simulator (required to get parameters and regulatory functions for all genes)
             
-            % store model parameters in arrays
+            % store model parameters in an array
             par=sim.parameters;
 
             % get the l value
-            F_r=sim.coll.F_r(par,ss0(5)./ss0(6));
+            F_r=sim.form.F_r(par,ss0(5)./ss0(6));
             phi_r=obj.ss_phi(plasmid_conc,ss,F_r,par('c_r'),par('a_r'),...
                 par('k+_r'),par('k-_r'),par('n_r'),ss0,e0,sim);
             l=e0./par('n_r').*phi_r;
         end
-
-        % steady state growth rate using FULL expression for l
-        % defined through a quadratic equation A2*l^2+A1*l+A0=0
-        function l=ss_l_full(obj, ...
-                plasmid_conc, ... % concentration of plasmid with heterologous genes
-                ss, ... % steady state of the system
-                ss0, ... % steady state without heterologous gene expression
-                e0, ... % steady state translation elongation rate without heterologous gene expression
-                sim) % simulator (required to get parameters and regulatory functions for all genes)
-            
-            % store model parameters in arrays
-            par=sim.parameters;
-            kcmh=par('kcm').*ss0(9);
-
-            % get A2
-            A2=1;
-
-            % get A1
-            A1=obj.denominator(plasmid_conc,ss,ss0,e0,par,sim)+par('b_a');
-
-            % get A0
-            k_r=sim.coll.k(e0,par('k+_r'),par('k-_r'),par('n_r'),kcmh);
-            F_r=sim.coll.F_r(par,ss0(5)./ss0(6));
-            A0=e0./par('n_r').*(F_r.*par('c_r').*par('a_r')./k_r);
-            
-            % get l
-            l=(-A1+sqrt(A1.^2+4*A0.*A2))./(2*A2);
-        end
         
         % denominator used in the expressions for phi and l
-        function denom=denominator(obj,plasmid_conc,ss,ss0,e0,par,sim)
+        function denom=denominator(obj,... % concentration of plasmid with heterolss_l_fullogous genes
+                plasmid_conc,... % plasmid cocnentration
+                ss,... % steady state of the system
+                ss0,... % steady state without heterologous gene expression
+                e0,... % steady state translation elongation rate without heterologous gene expression
+                sim) % simulator (required to get parameters and regulatory functions for all genes)
+
+            % store model parameters in an array
+            par=sim.parameters;
+
             denom = 0; % initialise denominator
-            kcmh=par('kcm').*par('h');
+            kcmh=par('kcm').*ss(8);
 
             % add contribution of metabolic genes
-            k_a=sim.coll.k(e0,par('k+_a'),par('k-_a'),par('n_a'),kcmh);
+            k_a=sim.form.k(e0,par('k+_a'),par('k-_a'),par('n_a'),kcmh);
             denom=denom+par('c_a').*par('a_a')./k_a;
 
             % add contribution of ribosomal gene
-            k_r=sim.coll.k(e0,par('k+_r'),par('k-_r'),par('n_r'),kcmh);
-            F_r=sim.coll.F_r(par,ss0(5)./ss0(6));
+            k_r=sim.form.k(e0,par('k+_r'),par('k-_r'),par('n_r'),kcmh);
+            F_r=sim.form.F_r(par,ss0(5)./ss0(6));
             denom=denom+F_r.*par('c_r').*par('a_r')./k_r;
 
             ext_inp=sim.ext.input(ss,0);
 
             % add contributions of heterologous genes
             for i=1:sim.num_het
-                k_i=sim.coll.k(e0,par(['k+_',sim.het.names{i}]),...
+                k_i=sim.form.k(e0,par(['k+_',sim.het.names{i}]),...
                     par(['k-_',sim.het.names{i}]),par(['n_',sim.het.names{i}]),kcmh);
                 F_i=sim.het.regulation(sim.het.names{i},ss,ext_inp); % right now, regulation assumed constant!
                 denom=denom+F_i.*plasmid_conc.*par(['a_',sim.het.names{i}])./k_i;
@@ -153,7 +136,8 @@ classdef heterologous_approx
             % rescale to account for housekeeping genes
             denom=denom./(1-sim.parameters('phi_q'));
         end
-
+           
+        % total protein production rate constant for the population of cells at t=0
         function mu_het=ss_mu_het(obj, ...
                 plasmid_conc, ... % concentration of plasmid with heterologous genes
                 ss, ... % steady state of the system
@@ -168,6 +152,15 @@ classdef heterologous_approx
             mu_het=par('M').*... % cell mass
                 phi_het.*... % het prot mass fraction
                 (l0.*(1-phi_het./(1-par('phi_q')))-delta); % growth rate-death rate
+        end
+        
+        % heterologous protein fraction maximising mu_het
+        function phi_het_max=phi_het_max(obj, ...
+                l0, ... % steady state translation elongation rate without heterologous gene expression
+                sim,... % simulator (required to get parameters and regulatory functions for all genes)
+                delta) % death rate
+
+            phi_het_max=0.5.*(1-delta./l0).*(1-sim.parameters('phi_q'));
         end
     end
 

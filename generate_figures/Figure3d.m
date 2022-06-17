@@ -1,58 +1,66 @@
-%% Initial preparations
+%% Figure3d.m
+% Plot growth rates for different fixed values of the ribosomal gene
+% transcription function, compare with the growth produced by Flux-Parity
+% Regulation
+
+%% CLEAR parameters, add paths of all files
 
 addpath(genpath('..'))
 
-Delta=0.01; % difference in growth rate not considered important
-Max_iter=100; % max. number of iterations
-sim = advanced_simulator;
-sim.tf=100; % time frame of single integration (h)
-sim.opt = odeset('reltol',1.e-6,'abstol',1.e-9);
-
+clear
 close all
 
+%% SET UP the simulator
+
+sim=cell_simulator; % initialise simulator
+
+% parameters for getting steady state
+sim.tf = 10; % single integraton step timeframe
+Delta = 0.01; % threshold that determines if we're in steady state
+Max_iter = 75; % maximum no. iterations (checking if SS reached over first 750 h)
+
+sim.opt = odeset('reltol',1.e-6,'abstol',1.e-9); % more lenient integration tolerances for speed
+
+%% DEFINE nutrient condiitons to explore
+
+% vector of nurtient qualities
 nutrients=flip([0.05,0.1,0.25,0.5,0.75,1]);
-% storing growth rates
-l_map = zeros(3,size(nutrients,2));
 
-% storing ribosome transcription rates
-F_r_map = zeros(3,size(nutrients,2));
+% range of fixed ribosome transcription regulation function values
+fixed_F_rs= 0.01:0.01:1;
 
-% storing ribosome concentrations
-R_map = zeros(3,size(nutrients,2));
+%% INITIALISE arrays that will store differen growth rates
+% storing growth rates - optimal and flux-parity
+l_map = zeros(2,size(nutrients,2));
 
-fixed_F_rs= 0.01:0.01:1; % range of fixed ribosome transcription coefficients
+% storing ribosome transcription regulation function values - optimal and flux-parity
+F_r_map = zeros(2,size(nutrients,2));
+
+% storing growth rates - for different fixed regulation function values
 ls=zeros(size(nutrients,2),size(fixed_F_rs,2));
-Rs=zeros(size(nutrients,2),size(fixed_F_rs,2));
 
+%% RUN simulations
 for j=1:size(nutrients,2)
+    % RESET
     sim=sim.set_default_parameters(); % reset initial consitions and parameters
     sim=sim.set_default_init_conditions(); % reset initial consitions and parameters
     sim.init_conditions('s')=nutrients(j); % set nutrient quality
 
     % Run with regulated ribosome transcription
     sim.parameters('is_fixed_F_r')=0; % F_r regulated now
-    [l, F_r, R] = get_steady_for_sweep(sim,Delta,Max_iter);
+
+%     [l, F_r, ~] = get_steady_for_sweep(sim,Delta,Max_iter);
+    ss=get_steady(sim,Delta,Max_iter);
+    [l,F_r]=get_lFr(sim,ss);
     l_map(1,j)=l;
     F_r_map(1,j)=F_r;
-    R_map(1,j)=R;
-
+    
+    % RESET
     sim=sim.set_default_parameters(); % reset initial consitions and parameters
     sim=sim.set_default_init_conditions(); % reset initial consitions and parameters
     sim.init_conditions('s')=nutrients(j); % set nutrient quality    
-    
-    % Run with fixed ribosome transcription
-    sim.parameters('is_fixed_F_r')=1; % F_r fixed now
-    sim.parameters('fixed_F_r')=0.6;
-    [l, F_r, R] = get_steady_for_sweep(sim,Delta,Max_iter);
-    l_map(2,j)=l;
-    F_r_map(2,j)=F_r;
-    R_map(2,j)=R;
-    
-    sim=sim.set_default_parameters(); % reset initial consitions and parameters
-    sim=sim.set_default_init_conditions(); % reset initial consitions and parameters
-    sim.init_conditions('s')=nutrients(j); % set nutrient quality
 
-    % Run with a range of fixed ribosome transcriptions
+    % Run with a range of fixed F_r values
     for i=1:size(fixed_F_rs,2)
         sim=sim.set_default_parameters(); % reset initial consitions and parameters
         sim=sim.set_default_init_conditions(); % reset initial consitions and parameters
@@ -61,15 +69,16 @@ for j=1:size(nutrients,2)
         
         disp(fixed_F_rs(i))
         sim.parameters('fixed_F_r')=fixed_F_rs(i);
-        [l, F_r, R] = get_steady_for_sweep(sim,Delta,Max_iter);
+%         [l, F_r, ~] = get_steady_for_sweep(sim,Delta,Max_iter);
+        ss=get_steady(sim,Delta,Max_iter);
+        [l,F_r]=get_lFr(sim,ss);
         ls(j,i)=l;
-        Rs(j,i)=R;
     end
+
     % finding optimal ribosome content
     [maxl,maxlpos]=max(ls(j,:));
-    l_map(3,j)=maxl;
-    F_r_map(3,j)=fixed_F_rs(maxlpos);
-    R_map(3,j)=Rs(j,maxlpos);
+    l_map(2,j)=maxl;
+    F_r_map(2,j)=fixed_F_rs(maxlpos);
     disp(j)
 end
 
@@ -79,11 +88,11 @@ set(Fig, 'defaultAxesFontSize', 9)
 set(Fig, 'defaultLineLineWidth', 1)
 hold on
 for j=1:size(nutrients,2)
-    plot(F_r_map(1,j),l_map(1,j),'o','Color','r')
-    plot(F_r_map(3,j),l_map(3,j),'o','Color',[0,0.75,0])
-
     linecolour=0.75*(1-nutrients(j));
-    plot(fixed_F_rs,ls(j,:),'Color',[linecolour, linecolour,linecolour])
+    plot(fixed_F_rs,ls(j,:),'Color',[linecolour, linecolour,linecolour]) % different fixed F_r values
+    
+    plot(F_r_map(1,j),l_map(1,j),'o','Color','r') % flux-parity regulation
+    plot(F_r_map(2,j),l_map(2,j),'o','Color',[0,0.75,0]) % optimal regulation
 end
 
 xlabel({'F_r, ribosomal gene transcription','regulation func.'});
@@ -92,53 +101,28 @@ ylim([0 2.5])
 grid on
 hold off
 
-%% Function for getting steady state
-function [l, F_r, R]=get_steady_for_sweep(sim,Delta,Max_iter)
-    % iterate integrations until steady state reached
-    lRBm_old=zeros(1,3); % start with growth rate assumed to be zero
-    for i=1:Max_iter
-        % evaluate growth rate
-        sim = sim.simulate_model;
-           
-        % evaluate growth
-        par=sim.parameters;
-        m_a = sim.x(end,1);
-        m_r = sim.x(end,2);
-        p_a = sim.x(end,3);
-        R = sim.x(end,4);
-        tc = sim.x(end,5);
-        tu = sim.x(end,6);
-        Bm = sim.x(end,7);
+%% FUNCTION for getting growth rate and F_r from the system's steady state
+function [l,F_r]=get_lFr(sim,ss)
+    % evaluate growth
+    par=sim.parameters;
+    m_a = ss(1); % metabolic gene mRNA
+    m_r = ss(2); % ribosomal mRNA
+    p_a = ss(3); % metabolic proteins
+    R = ss(4); % operational ribosomes
+    tc = ss(5); % charged tRNAs
+    tu = ss(6); % uncharged tRNAs
+    Bm = ss(7); % inactivated ribosomes
+    s=ss(8); % nutrient quality
+    h=ss(9); % chloramphenicol conc.
 
-        e=sim.coll.e(par,tc);
-        kcmh=par('kcm').*par('h');
-        k_a=sim.coll.k(e,par('k+_a'),par('k-_a'),par('n_a'),kcmh);
-        k_r=sim.coll.k(e,par('k+_r'),par('k-_r'),par('n_r'),kcmh);
-        D=1+(m_a./k_a+m_r./k_r)./(1-par('phi_q')); % denominator in ribosome competition cobj.optalculations
-        B=R.*(1-1./D);
+    e=sim.form.e(par,tc); % translation elongation ratio
+    k_a=sim.form.k(e,par('k+_a'),par('k-_a'),par('n_a'),par('kcm').*h); % ribosome-mRNA dissociation constant (metab. genes)
+    k_r=sim.form.k(e,par('k+_r'),par('k-_r'),par('n_r'),par('kcm').*h); % ribosome-mRNA dissociation constant (rib. genes)
+    D=1+(m_a./k_a+m_r./k_r)./(1-par('phi_q')); % denominator in ribosome competition calculations
+    B=R.*(1-1./D); % actively translating ribosomes (inc. those translating housekeeping genes)
 
-        l=sim.coll.l(par,e,B); % growth rate!
-        
-        T = tc./tu;
-        F_r = sim.coll.F_r(par,T) ; % ribosome regulation
+    l=sim.form.l(par,e,B); % growth rate!
     
-        if(norm([l,R,Bm]-lRBm_old)<Delta) % if SS reached, quit
-            break
-        else % if not, continue integrating
-            lRBm_old=[l,R,Bm];
-            sim.init_conditions('m_a')=m_a;
-            sim.init_conditions('m_r')=m_r;
-            % proteins
-            sim.init_conditions('p_a')=p_a;
-            sim.init_conditions('R')=R;
-            % tRNAs
-            sim.init_conditions('tc')=tc;
-            sim.init_conditions('tu')=tu;
-        end
-    end
-    if(i==Max_iter)
-        disp('Warning! SS not reached yet')
-%     else
-%         disp(['SS reached in ',num2str(i),' iterations'])
-    end
+    T = tc./tu; % ratio of charged to uncharged tRNAs
+    F_r = sim.form.F_r(par,T) ; % ribosome regulation
 end

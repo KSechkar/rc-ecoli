@@ -2,32 +2,35 @@
 % Generate figures displaying fits/predictions obtained using a more
 % accurate model of ribosome inactivation by chloramphenicol
 
-%% CLEAR
+%% CLEAR parameters, add paths of all files
 
 addpath(genpath('..'))
 
-clear all
+clear
 close all
 
-%% ORIGINAL PARAMETER VALUES
+%% DEFINE starting parameter values (to compare with the fit)
+
 params = {
-    {'a_a', 4.14*60,  0}
-    {'a_r', 55800, 0}
-    {'nu_max', 6000,  0}
-    {'K_t', 80000, 0}
-    {'kcm', 0.3594/1000, 0}
+    {'a_a', 55800,  0} % metabolic gene transcription rate
+    {'a_r', 55800, 0} % max. ribosomal gene transcription rate
+    {'nu_max', 6000,  0} % max. tRNA aminoacylatio rate
+    {'K_t', 80000, 0} % MM constants for translation elongation and tRNA charging rates
+    {'kcm', 0.3594/1000, 0} % chloramphenicol binding rate constant
     };
+
 % record original params into a single vector
 theta_origin=zeros([size(params,1) 1]);
 for i=1:size(theta_origin,1)
     theta_origin(i) = params{i}{2};
 end
 
-%% LOAD EXPERIMENTAL DATA (FOR COMPARISON WITH MODEL)
-% read the experimental dataset (eq2 strain of Scott 2010)
-dataset = readmatrix('data/scott2010-eq2-notext.csv');
+%% LOAD Experimental data (to compare with the fit)
 
-% [1] => nutrient qualities are equally log-spaced points
+% read the experimental dataset (eq2 strain of Scott 2010)
+dataset = readmatrix('data/scott2010_chure2022_notext.csv');
+
+% nutrient qualities are equally log-spaced points
 nutr_quals=logspace(log10(0.08),log10(0.5),6);
 
 % get inputs: nutrient quality and h; get outputs: l and rib mass frac
@@ -51,13 +54,12 @@ end
 % params for finding steady state
 Delta = 0.1; % threshold below which the changes in l and phi_r assumed negligible
 Max_iter=25; % max. no iterations for finding steady state
-sim=advanced_simulator_corrected_inactivation; % initialise simulator
+sim=cell_simulator_corrected_inactivation; % initialise simulator - NOTE: NOT CELL_SIMULATOR
 sim.tf=10;
 sim.opt = odeset('reltol',1.e-6,'abstol',1.e-9);
 
 
 %% AppFigure2a - display results of the fitting the corrected model to experimental data
-
 
 fitted_vals=[ 263.35; ... % transcription rate (/h)
     461.08; % transcription rate (/h)
@@ -66,9 +68,9 @@ fitted_vals=[ 263.35; ... % transcription rate (/h)
     4.0723/100000; % chloramphenical binding rate constant (/h/nM)  
     ];
 
-ymodel=advanced_modelfun(fitted_vals,data.xdata,sim,Delta,Max_iter);
+ymodel=rc_ecoli_modelfun(fitted_vals,data.xdata,sim,Delta,Max_iter);
 
-sum((ymodel-data.ydata).^2)
+disp(['SOS=',num2str(sum((ymodel-data.ydata).^2))]) % print resultant sum of squared errors
 
 % PLOT AND COMPARE
 AppFig2a = figure('Position',[0 0 385 280]);
@@ -188,9 +190,9 @@ fitted_vals=[ 2.706*10^5; ... % transcription rate (/h)
     4.2020/10000; % chloramphenical binding rate constant (/h/nM)  
     ];
 
-ymodel=advanced_modelfun(fitted_vals,data.xdata,sim,Delta,Max_iter);
+ymodel=rc_ecoli_modelfun(fitted_vals,data.xdata,sim,Delta,Max_iter);
 
-sum((ymodel-data.ydata).^2)
+disp(['SOS=',num2str(sum((ymodel-data.ydata).^2))]) % print resultant sum of squared errors
 
 % PLOT AND COMPARE
 AppFig2b = figure('Position',[0 0 385 280]);
