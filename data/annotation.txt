@@ -5,13 +5,13 @@ ANNOTATION AND REFERENCES FOR EXPERIMENTAL DATA
 	-- scott2010_chure2022_notext.csv provides these data without any text for the ease of being read by Matlab programs
 	-- scott2010_chure2022_errors.xlsx shows how the S20 and n0 parameters of the errors' prior distributions were calculated from these data for the DRAM algorithm
 
-- In 55_yrs_(...).csv, we store experimental data from 26 different experimental studies conducted over the last 55 years, which were complied together  by Chure et al. [1]. Namely,
+- In 55_yrs_(...).csv, we store experimental data from 26 different experimental studies conducted over the last 55 years, which were complied together  by Chure et al. (1). Namely,
 	-- 55_yrs_ribosomes.csv matches measured ribosomal mass fractions with corresponding growth rates
 	-- 55_yrs_elongation.csv matches translation elogation rates with corresponding growth rates
 	-- 55_yrs_heterologous.csv matches heterologous protein mass frations with ratios of the corresponding growth rates to the growth rate of cells not expressing any synthetic genes
 
 
 REFERENCES
-[1] - Chure G et al. 2022 An Optimal Regulation of Fluxes Dictates Microbial Growth In and Out of Steady-State
+(1) - Chure G et al. 2022 An Optimal Regulation of Fluxes Dictates Microbial Growth In and Out of Steady-State
 
-[2] - Scott et al. 2010 Mechanistic links between cellular trade-offs, gene expression, and growth
+(2) - Scott et al. 2010 Mechanistic links between cellular trade-offs, gene expression, and growth

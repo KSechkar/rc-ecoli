@@ -3,7 +3,7 @@
 
 % The expression of synthetic circuits can be simulated by loading the
 % 'heterologous genes' and 'external input' modules (see het_modules and
-% ext_input folders). Remember to PUSH the associated modules' parameters
+% ext_inputs folders). Remember to PUSH the associated modules' parameters
 % into the main framework's memory every time you alter them.
 
 %%
