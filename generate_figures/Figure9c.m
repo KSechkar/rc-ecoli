@@ -84,7 +84,7 @@ for i_kappa=1:size(kappa_vals,2)
         [F0,l0]=get_fl(ss0,sim);
         
         % calculate error in sensor signal (%)
-        d0_errors(i_kappa,i_theta)=abs((F0-u)./u).*100;
+        d0_errors(i_kappa,i_theta)=abs((F0-infopar('u'))./infopar('u')).*100;
     end
 end
 
@@ -99,7 +99,7 @@ caxis([0 15]) % colours axis
 
 % CHANGING AXIS LABELS
 custom_x_lables={};
-hmap.XDisplayLabels = string(round(theta_vals,2));
+hmap.XDisplayLabels = string(round(theta_vals,4));
 hmap.YDisplayLabels = string(flip(round(kappa_vals/1000,2)));
 
 title('Error between u and F_{anti} before disturbance [%]');
@@ -107,7 +107,7 @@ ylabel('\kappa, annihilator synthesis rate [nM/h]')
 xlabel('\theta, actuator-annihilator binding rate constant [1/(nM \cdot h)]')
 
 %% FUNCTION for getting the growth rate and the annihilator gene transcription regulation function
-function [l,F_anti]=get_fl(ss,sim)
+function [F_anti,l]=get_fl(ss,sim)
     % get growth rate and ribosome mass fraction
     par=sim.parameters;
     m_a = ss(1);

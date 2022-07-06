@@ -48,8 +48,8 @@ for j=1:size(nutr_quals,2)
     disp(nutr_quals(j))
 
     % reset simulator
-    sim.parameters=advanced_params();
-    sim.init_conditions=advanced_init_conds(sim.parameters); % reset intial conditions
+    sim.parameters=cell_params();
+    sim.init_conditions=cell_init_conds(sim.parameters); % reset intial conditions
     
     % set nutrient quality
     sim.init_conditions('s')=nutr_quals(j);

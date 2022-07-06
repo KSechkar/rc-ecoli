@@ -105,6 +105,7 @@ for i=1:size(plasmid_concs,2)
 end
 
 %% Figure 4b: cell growth as a function of burden
+approx_colour=[0.6350 0.0780 0.1840];
 
 Fig4b = figure('Position',[0 0 316 280]);
 set(Fig4b, 'defaultAxesFontSize', 9)
@@ -118,6 +119,7 @@ plot([0,plasmid_concs*a_xtra]./kxNB,[l0_approx,ls_approx],...
 xlabel({'\xi, translational burden [1/h]'});
 ylabel('\lambda, growth rate [1/h]');
 
+legend('Simulation results','Analytical estimates','Location','northeast')
 grid on
 hold off
 

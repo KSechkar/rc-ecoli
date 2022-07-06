@@ -90,18 +90,20 @@ hold on
 colours=['c','g','b','r','m'];
 colourind=1;
 last_nutr_qual=data.xdata(1,1);
-for i=1:size(data.xdata,1)
+for i=size(data.xdata,1) %i=1:size(data.xdata,1)
     if(data.xdata(i,1)~=last_nutr_qual)
         colourind=colourind+1;
         last_nutr_qual=data.xdata(i,1);
     end
-    plot(data.ydata(i,1),data.ydata(i,2),'o','Color',colours(colourind),'LineWidth',1) % real data
-    plot(ymodel(i,1),ymodel(i,2),'+','Color',colours(colourind),'MarkerSize',8,'LineWidth',1.25) % model predictions
+    plot(data.ydata(i,1),data.ydata(i,2),'o','Color','m','LineWidth',1) % real data
+    plot(ymodel(i,1),ymodel(i,2),'+','Color','m','MarkerSize',8,'LineWidth',1.25) % model predictions
     %plot(ymodel_origin(i,1),ymodel_origin(i,2),'x','Color',colours(colourind),'MarkerSize',8,'LineWidth',1.25) % original model predictions (optional)
 
 end
 ylabel('Ribosome mass fraction \phi_r');
 xlabel('Growth rate \lambda, 1/h')
+
+legend('Fitted experimental data','Model predictions')
 
 xlim([0 2])
 ylim([0 0.45])
