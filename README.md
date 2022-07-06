@@ -3,7 +3,7 @@ MATLAB code for modelling how synthetic gene circuits interact with the host cel
 
 ## cell_model
 Contains scripts implementing the model of an E.coli cell. These include:
-- _cell_simulator.m_ - a Matlab class object enabling simulations of the host cell. The expression of synthetic circuits can be simulated by loading the 'heterologous gene' and 'external input' modules (see _het_modules_ and _ext_modules_ folders). Note that the associated modules' parameters must be pushed into the main simulator's memory using the function _push_het_ every time they altered.
+- _cell_simulator.m_ - a Matlab class object enabling simulations of the host cell. The expression of synthetic circuits can be simulated by loading the 'heterologous gene' and 'external input' modules (see _het_modules_ and _ext_inputs_ folders). Note that the associated modules' parameters must be pushed into the main simulator's memory using the function _push_het_ every time they altered.
 - _cell_params.m_ - provides default values of all parameters decsribing the host cell
 - - _cell_params.m_ - provides default initial conditions for the state of the cell
 - _cell_formulae.m_ - contains a collection of formulae for rate and activation functions used by the cell simulator
